@@ -225,9 +225,6 @@ let parsed: positive::Positive = serde_json::from_str(&json).unwrap();
 
 This project is licensed under the MIT License.
 
-### Author
-
-Joaquín Béjar García <jb@taunais.com>
 
 
 
