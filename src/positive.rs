@@ -31,22 +31,76 @@ pub const EPSILON: Decimal = dec!(1e-16);
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct Positive(pub Decimal);
 
-/// Macro for creating a new `Positive` value with simplified syntax.
+/// Macro for creating a `Positive` value from the given expression.
 ///
-/// # Panics
+/// Returns `Ok(Positive)` if the value is valid and non-negative,
+/// otherwise returns `Err(PositiveError)`.
 ///
-/// This macro will panic if the provided value cannot be converted to a `Positive` value.
+/// # Example
+///
+/// ```rust
+/// use positive::pos;
+///
+/// let valid = pos!(5.0);
+/// assert!(valid.is_ok());
+///
+/// let invalid = pos!(-5.0);
+/// assert!(invalid.is_err());
+/// ```
 #[macro_export]
 macro_rules! pos {
     ($val:expr) => {
-        $crate::Positive::new($val).unwrap()
+        $crate::Positive::new($val)
     };
 }
 
-/// A macro to create an optional `Positive` value from the given expression.
+/// Macro for creating a new `Positive` value that panics on invalid input.
+///
+/// Use this macro when you are certain the value is valid and want to
+/// avoid handling the `Result`. For safer alternatives, use `pos!()` which
+/// returns `Result<Positive, PositiveError>`.
+///
+/// # Panics
+///
+/// This macro will panic if the provided value cannot be converted to a `Positive` value
+/// (e.g., negative numbers or values that cannot be represented as `Decimal`).
+///
+/// # Example
+///
+/// ```rust
+/// use positive::pos_or_panic;
+///
+/// let value = pos_or_panic!(5.0);
+/// assert_eq!(value.to_f64(), 5.0);
+/// ```
+#[macro_export]
+macro_rules! pos_or_panic {
+    ($val:expr) => {
+        $crate::Positive::new($val).expect("Failed to create Positive value")
+    };
+}
+
+/// Macro for creating an optional `Positive` value from the given expression.
+///
+/// Returns `Some(Positive)` if the value is valid and non-negative,
+/// otherwise returns `None`. This is useful when you want to ignore errors.
+///
+/// # Example
+///
+/// ```rust
+/// use positive::spos;
+///
+/// let valid = spos!(5.0);
+/// assert!(valid.is_some());
+///
+/// let invalid = spos!(-5.0);
+/// assert!(invalid.is_none());
+/// ```
 #[macro_export]
 macro_rules! spos {
-    ($val:expr) => {{ $crate::Positive::new($val).ok() }};
+    ($val:expr) => {
+        $crate::Positive::new($val).ok()
+    };
 }
 
 /// Determines if the given type parameter `T` is the `Positive` type.
@@ -72,6 +126,9 @@ impl Positive {
     pub const THOUSAND: Positive = Positive(Decimal::ONE_THOUSAND);
     /// The mathematical constant π (pi) represented as a `Positive` value.
     pub const PI: Positive = Positive(Decimal::PI);
+
+    /// The mathematical constant e (Euler's number) represented as a `Positive` value.
+    pub const E: Positive = Positive(Decimal::E);
 
     /// Creates a new `Positive` value from a 64-bit floating-point number.
     pub fn new(value: f64) -> Result<Self, PositiveError> {
@@ -123,9 +180,16 @@ impl Positive {
     }
 
     /// Converts the value to a 64-bit floating-point number.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if the conversion fails. Use `to_f64_checked()`
+    /// or `to_f64_lossy()` for non-panicking alternatives.
     #[must_use]
     pub fn to_f64(&self) -> f64 {
-        self.0.to_f64().unwrap()
+        self.0
+            .to_f64()
+            .expect("Decimal to f64 conversion failed - value out of range")
     }
 
     /// Converts the value to f64, returning None if conversion fails.
@@ -141,9 +205,16 @@ impl Positive {
     }
 
     /// Converts the value to a 64-bit signed integer.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if the conversion fails. Use `to_i64_checked()`
+    /// for a non-panicking alternative.
     #[must_use]
     pub fn to_i64(&self) -> i64 {
-        self.0.to_i64().unwrap()
+        self.0
+            .to_i64()
+            .expect("Decimal to i64 conversion failed - value out of range")
     }
 
     /// Converts the value to i64, returning None if conversion fails.
@@ -153,9 +224,16 @@ impl Positive {
     }
 
     /// Converts the inner value to a `u64`.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if the conversion fails. Use `to_u64_checked()`
+    /// for a non-panicking alternative.
     #[must_use]
     pub fn to_u64(&self) -> u64 {
-        self.0.to_u64().unwrap()
+        self.0
+            .to_u64()
+            .expect("Decimal to u64 conversion failed - value out of range")
     }
 
     /// Converts the value to u64, returning None if conversion fails.
@@ -165,9 +243,16 @@ impl Positive {
     }
 
     /// Converts the value to a usize.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if the conversion fails. Use `to_usize_checked()`
+    /// for a non-panicking alternative.
     #[must_use]
     pub fn to_usize(&self) -> usize {
-        self.0.to_usize().unwrap()
+        self.0
+            .to_usize()
+            .expect("Decimal to usize conversion failed - value out of range")
     }
 
     /// Converts the value to usize, returning None if conversion fails.
@@ -232,20 +317,25 @@ impl Positive {
         let normalized = self / &ten_pow;
         let nice_number = if normalized < dec!(1.5) {
             Positive::ONE
-        } else if normalized < pos!(3.0) {
+        } else if normalized < pos_or_panic!(3.0) {
             Positive::TWO
-        } else if normalized < pos!(7.0) {
-            pos!(5.0)
+        } else if normalized < pos_or_panic!(7.0) {
+            pos_or_panic!(5.0)
         } else {
             Positive::TEN
         };
-        nice_number * pos!(10.0).powu(magnitude.to_u64())
+        nice_number * pos_or_panic!(10.0).powu(magnitude.to_u64())
     }
 
     /// Calculates the square root of the value.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if the square root calculation fails.
+    /// Use `sqrt_checked()` for a non-panicking alternative.
     #[must_use]
     pub fn sqrt(&self) -> Positive {
-        Positive(self.0.sqrt().unwrap())
+        Positive(self.0.sqrt().expect("Square root calculation failed"))
     }
 
     /// Calculates the square root, returning an error if it fails.
@@ -393,7 +483,7 @@ impl PartialEq<&Positive> for Positive {
 
 impl From<Positive> for u64 {
     fn from(pos_u64: Positive) -> Self {
-        pos_u64.0.to_u64().unwrap()
+        pos_u64.0.to_u64().unwrap_or(0)
     }
 }
 
@@ -591,7 +681,10 @@ impl fmt::Debug for Positive {
         if *self == Positive::INFINITY {
             write!(f, "{}", f64::MAX)
         } else if self.0.scale() == 0 {
-            write!(f, "{}", self.0.to_i64().unwrap())
+            match self.0.to_i64() {
+                Some(val) => write!(f, "{val}"),
+                None => write!(f, "{}", self.0),
+            }
         } else {
             write!(f, "{}", self.0)
         }
@@ -810,7 +903,7 @@ impl Eq for Positive {}
 
 impl Ord for Positive {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.0.partial_cmp(&other.0).unwrap()
+        self.0.partial_cmp(&other.0).unwrap_or(Ordering::Equal)
     }
 }
 

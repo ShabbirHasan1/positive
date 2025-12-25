@@ -1,7 +1,3 @@
-<div style="text-align: center;">
-<img src="https://raw.githubusercontent.com/joaquinbejar/positive/refs/heads/main/doc/images/logo.png" alt="positive" style="width: 100%; height: 100%;">
-</div>
-
 [![Dual License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 [![Crates.io](https://img.shields.io/crates/v/positive.svg)](https://crates.io/crates/positive)
 [![Downloads](https://img.shields.io/crates/d/positive.svg)](https://crates.io/crates/positive)
