@@ -221,7 +221,7 @@
 
 pub mod error;
 mod positive;
-
+mod tests;
 pub use error::{PositiveError, PositiveResult};
 pub use positive::*;
 
